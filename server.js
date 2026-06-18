@@ -2,24 +2,158 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const WebSocket = require('ws');
+const Database = require('better-sqlite3');
 
 const PORT = process.env.SERVER_PORT || process.env.PORT || 3000;
+const DB_PATH = process.env.DB_PATH || '/app/data/game.db';
+const BOSS_RESPAWN_DELAY = parseInt(process.env.BOSS_RESPAWN_DELAY, 10) || 3600000;
 
-// Shared Game State
-let bossHP = 1000000;
+fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
+
+const db = new Database(DB_PATH);
+db.pragma('journal_mode = WAL');
+db.pragma('foreign_keys = ON');
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS boss_fights (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    started_at INTEGER NOT NULL,
+    ended_at INTEGER,
+    total_damage INTEGER DEFAULT 0,
+    participant_count INTEGER DEFAULT 0,
+    status TEXT DEFAULT 'active',
+    current_hp INTEGER NOT NULL DEFAULT 1000000
+  );
+
+  CREATE TABLE IF NOT EXISTS contributions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    fight_id INTEGER NOT NULL REFERENCES boss_fights(id),
+    player_name TEXT NOT NULL,
+    damage INTEGER NOT NULL DEFAULT 0,
+    hits INTEGER NOT NULL DEFAULT 0,
+    UNIQUE(fight_id, player_name)
+  );
+
+  CREATE TABLE IF NOT EXISTS all_time_leaders (
+    player_name TEXT PRIMARY KEY,
+    total_damage INTEGER NOT NULL DEFAULT 0,
+    total_hits INTEGER NOT NULL DEFAULT 0,
+    bosses_killed INTEGER NOT NULL DEFAULT 0,
+    last_seen INTEGER NOT NULL
+  );
+`);
+
 const bossMaxHP = 1000000;
-let bossPhase = 'shielded'; // starts shielded
+let bossHP = bossMaxHP;
+let bossPhase = 'shielded';
 let bossDefeated = false;
+let currentFightId = null;
+let participants = new Set();
+let finalLeaderboard = null;
+let respawnTimer = null;
+let countdownInterval = null;
 
-const participants = new Set(); // Store unique player IDs of contributors
-const players = new Map(); // ws connection -> player state
+const players = new Map();
 
-// Constants
 const RANGER_MAX_DMG = 100;
 const PALADIN_MAX_DMG = 80;
 const PRIEST_MAX_DMG = 60;
 
-// Create HTTP server to serve index.html statically
+try {
+  const existing = db.prepare('SELECT id, current_hp FROM boss_fights WHERE status = ? LIMIT 1').get('active');
+  if (existing) {
+    currentFightId = existing.id;
+    bossHP = existing.current_hp;
+    if (bossHP <= 0) {
+      bossDefeated = true;
+      bossHP = 0;
+    }
+    console.log(`[DB] Resumed active fight #${currentFightId} (boss HP: ${bossHP})`);
+  }
+} catch (err) {
+  console.error('[DB] Error checking for active fight:', err.message);
+}
+
+if (!currentFightId) {
+  try {
+    const info = db.prepare('INSERT INTO boss_fights (started_at, current_hp) VALUES (?, ?)').run(Date.now(), bossMaxHP);
+    currentFightId = Number(info.lastInsertRowid);
+    console.log(`[DB] Created new fight #${currentFightId}`);
+  } catch (err) {
+    console.error('[DB] Error creating initial fight:', err.message);
+  }
+}
+
+function sanitizeDisplayName(name) {
+  if (typeof name !== 'string') return 'Anonymous';
+  return name.replace(/<[^>]*>/g, '').trim().slice(0, 20) || 'Anonymous';
+}
+
+function broadcast(msgObj) {
+  const payload = JSON.stringify(msgObj);
+  for (const client of players.keys()) {
+    if (client.readyState === WebSocket.OPEN) {
+      try { client.send(payload); } catch (err) { /* skip */ }
+    }
+  }
+}
+
+function sendTo(ws, msgObj) {
+  try {
+    if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msgObj));
+  } catch (err) { /* skip */ }
+}
+
+function startRespawnTimer() {
+  if (respawnTimer) clearTimeout(respawnTimer);
+  if (countdownInterval) clearInterval(countdownInterval);
+
+  let remaining = Math.ceil(BOSS_RESPAWN_DELAY / 1000);
+
+  broadcast({ type: 'bossRespawning', secondsUntil: remaining });
+
+  countdownInterval = setInterval(() => {
+    remaining--;
+    if (remaining > 0) {
+      broadcast({ type: 'bossRespawning', secondsUntil: remaining });
+    } else {
+      clearInterval(countdownInterval);
+      countdownInterval = null;
+    }
+  }, 60000);
+
+  respawnTimer = setTimeout(() => {
+    respawnTimer = null;
+    if (countdownInterval) {
+      clearInterval(countdownInterval);
+      countdownInterval = null;
+    }
+
+    bossHP = bossMaxHP;
+    bossDefeated = false;
+    bossPhase = 'shielded';
+    participants = new Set();
+    finalLeaderboard = null;
+
+    try {
+      const info = db.prepare('INSERT INTO boss_fights (started_at, current_hp) VALUES (?, ?)').run(Date.now(), bossMaxHP);
+      currentFightId = Number(info.lastInsertRowid);
+      console.log(`[DB] Created new fight #${currentFightId}`);
+    } catch (err) {
+      console.error('[DB] Error creating respawn fight:', err.message);
+    }
+
+    broadcast({ type: 'bossRespawned', bossHP: bossMaxHP });
+    console.log('[Game] Boss has respawned');
+  }, BOSS_RESPAWN_DELAY);
+}
+
+setInterval(() => {
+  if (bossDefeated) return;
+  bossPhase = (bossPhase === 'shielded') ? 'vulnerable' : 'shielded';
+  broadcast({ type: 'phaseChange', bossPhase });
+}, 30000);
+
 const server = http.createServer((req, res) => {
   if (req.method === 'GET' && (req.url === '/' || req.url === '/index.html')) {
     const filePath = path.join(__dirname, 'index.html');
@@ -38,45 +172,19 @@ const server = http.createServer((req, res) => {
   }
 });
 
-// Create WebSocket server
 const wss = new WebSocket.Server({ server });
 
-// Helper to broadcast to all open connections
-function broadcast(msgObj) {
-  const payload = JSON.stringify(msgObj);
-  for (const client of players.keys()) {
-    if (client.readyState === WebSocket.OPEN) {
-      try {
-        client.send(payload);
-      } catch (err) {
-        // Ignore message delivery errors
-      }
-    }
-  }
-}
-
-// Boss phase toggles every 30 seconds server-side via setInterval
-setInterval(() => {
-  if (bossDefeated) return;
-  bossPhase = (bossPhase === 'shielded') ? 'vulnerable' : 'shielded';
-  broadcast({ type: 'phaseChange', bossPhase });
-}, 30000);
-
 wss.on('connection', (ws) => {
-  // Rate-limiting window counters per connection
   let messageCount = 0;
   let windowStart = Date.now();
 
-  // Assign a random 4-character hex player ID
   const hexChars = '0123456789abcdef';
   let playerId = '';
-  for (let i = 0; i < 4; i++) {
-    playerId += hexChars[Math.floor(Math.random() * 16)];
-  }
+  for (let i = 0; i < 4; i++) playerId += hexChars[Math.floor(Math.random() * 16)];
 
-  // Create connection state
   const playerData = {
     id: playerId,
+    displayName: null,
     class: null,
     profession: null,
     damageContributed: 0,
@@ -87,158 +195,112 @@ wss.on('connection', (ws) => {
 
   players.set(ws, playerData);
 
-  // Send initial state message to newly connected client
-  ws.send(JSON.stringify({
+  sendTo(ws, {
     type: 'init',
     playerId,
     bossHP,
     bossPhase,
     playerCount: players.size
-  }));
+  });
 
-  // If the boss is already dead, send bossDefeated state immediately
   if (bossDefeated) {
-    ws.send(JSON.stringify({
+    sendTo(ws, {
       type: 'bossDefeated',
       participants: Array.from(participants)
-    }));
+    });
+    if (finalLeaderboard) {
+      sendTo(ws, { type: 'leaderboard', scope: 'final', data: finalLeaderboard });
+    }
   }
 
-  // Broadcast updated playerCount to everyone
   broadcast({ type: 'playerCount', count: players.size });
 
   ws.on('message', (message) => {
     try {
-      // 5. MESSAGE SIZE CAP (Block oversized payloads)
       const rawMessage = message.toString();
-      if (rawMessage.length > 512) {
-        return; // Silently drop
-      }
+      if (rawMessage.length > 512) return;
 
-      // 4. MESSAGE RATE LIMITING (Allow max 30 messages per 10-second window)
       const now = Date.now();
-      if (now - windowStart >= 10000) {
-        windowStart = now;
-        messageCount = 0;
-      }
+      if (now - windowStart >= 10000) { windowStart = now; messageCount = 0; }
       messageCount++;
-      if (messageCount > 30) {
-        return; // Silently drop
-      }
+      if (messageCount > 30) return;
 
-      // 6. SCHEMA VALIDATION (Check types & structures)
       let data;
-      try {
-        data = JSON.parse(rawMessage);
-      } catch (e) {
-        return; // Silently drop malformed JSON
-      }
-
-      if (!data || typeof data !== 'object' || typeof data.type !== 'string') {
-        return; // Silently drop
-      }
+      try { data = JSON.parse(rawMessage); } catch (e) { return; }
+      if (!data || typeof data !== 'object' || typeof data.type !== 'string') return;
 
       const player = players.get(ws);
       if (!player) return;
 
       switch (data.type) {
         case 'playerInfo': {
-          // Schema constraints:
-          // Valid class/profession lists
-          // Only sendable ONCE (tracked via playerInfoLocked)
-          if (player.playerInfoLocked) {
-            return;
-          }
+          if (player.playerInfoLocked) return;
 
           const validClasses = ['Ranger', 'Paladin', 'Priest'];
           const validProfessions = ['Fletcher', 'Smithy', 'Scholar'];
 
-          if (!validClasses.includes(data.class) || !validProfessions.includes(data.profession)) {
-            return;
-          }
+          if (!validClasses.includes(data.class) || !validProfessions.includes(data.profession)) return;
 
+          player.displayName = sanitizeDisplayName(data.displayName);
           player.class = data.class;
           player.profession = data.profession;
           player.playerInfoLocked = true;
 
-          // Broadcast updated player list count
           broadcast({ type: 'playerCount', count: players.size });
           break;
         }
 
         case 'craftComplete': {
-          // 9. CRAFT COOLDOWN ENFORCED SERVER-SIDE
-          // Record successful minigame completion timestamp
           player.lastCraftAt = Date.now();
           break;
         }
 
         case 'damage': {
-          // 8. BOSS TERMINAL STATE (Prevent hits after death)
-          if (bossDefeated) {
-            return;
-          }
+          if (bossDefeated) return;
+          if (typeof data.amount !== 'number') return;
 
-          // Schema check for damage
-          if (typeof data.amount !== 'number') {
-            return;
-          }
-
-          // 1. DAMAGE VALUE CLAMP (Zero/Negative check and per-class caps)
           const amt = data.amount;
-          if (amt <= 0 || !Number.isFinite(amt) || Number.isNaN(amt)) {
-            return;
-          }
-
-          if (!player.class) {
-            return;
-          }
+          if (amt <= 0 || !Number.isFinite(amt) || Number.isNaN(amt)) return;
+          if (!player.class) return;
 
           let classMax = 0;
           if (player.class === 'Ranger') classMax = RANGER_MAX_DMG;
           else if (player.class === 'Paladin') classMax = PALADIN_MAX_DMG;
           else if (player.class === 'Priest') classMax = PRIEST_MAX_DMG;
 
-          if (amt > classMax) {
-            return;
-          }
+          if (amt > classMax) return;
+          if (player.lastBattleAt !== null && (now - player.lastBattleAt < 150000)) return;
+          if (player.lastCraftAt === null || player.lastCraftAt === undefined) return;
+          if (now - player.lastCraftAt > 110000) return;
 
-          // 3. BATTLE COOLDOWN ENFORCED SERVER-SIDE (Min 2.5 min battle cooldown)
-          if (player.lastBattleAt !== null && (now - player.lastBattleAt < 150000)) {
-            return;
-          }
-
-          // 9. CRAFT TIMELINE CHECK (Verify a valid craft exists and is within 110s of action)
-          if (player.lastCraftAt === null || player.lastCraftAt === undefined) {
-            return;
-          }
-          if (now - player.lastCraftAt > 110000) {
-            return; // Expired craft, player must craft again
-          }
-
-          // 7. INTEGER CONVERSION FOR DAMAGE
           const baseDmg = Math.floor(amt);
-          if (baseDmg <= 0) {
-            return;
-          }
+          if (baseDmg <= 0) return;
 
-          // 2. PHASE MULTIPLIER (Calculated on server-side authority)
           const mult = (bossPhase === 'shielded') ? 0.25 : 1.0;
           const finalDmg = Math.floor(baseDmg * mult);
 
-          // Update battle cooldown
           player.lastBattleAt = now;
-
-          // Apply damage
           bossHP -= finalDmg;
-          if (bossHP < 0) {
-            bossHP = 0;
-          }
+          if (bossHP < 0) bossHP = 0;
 
           player.damageContributed += finalDmg;
           participants.add(player.id);
 
-          // Broadcast authoritative boss update to all clients
+          try {
+            const playerName = player.displayName || player.id;
+            db.prepare(
+              'INSERT OR IGNORE INTO contributions (fight_id, player_name, damage, hits) VALUES (?, ?, 0, 0)'
+            ).run(currentFightId, playerName);
+            db.prepare(
+              'UPDATE contributions SET damage = damage + ?, hits = hits + 1 WHERE fight_id = ? AND player_name = ?'
+            ).run(finalDmg, currentFightId, playerName);
+            db.prepare(
+              'UPDATE boss_fights SET current_hp = ?, total_damage = total_damage + ? WHERE id = ?'
+            ).run(bossHP, finalDmg, currentFightId);
+          } catch (err) {
+            console.error('[DB] Error persisting damage:', err.message);
+          }
+
           broadcast({
             type: 'bossUpdate',
             bossHP,
@@ -248,13 +310,68 @@ wss.on('connection', (ws) => {
             lastHitAmount: finalDmg
           });
 
-          // Check for Victory state trigger
           if (bossHP <= 0 && !bossDefeated) {
             bossDefeated = true;
+
+            try {
+              db.prepare(
+                `UPDATE boss_fights SET ended_at = ?, status = 'defeated', current_hp = 0,
+                 participant_count = (SELECT COUNT(*) FROM contributions WHERE fight_id = ?)
+                 WHERE id = ?`
+              ).run(Date.now(), currentFightId, currentFightId);
+
+              const contributors = db.prepare(
+                'SELECT player_name, damage, hits FROM contributions WHERE fight_id = ?'
+              ).all(currentFightId);
+
+              const upsert = db.prepare(
+                `INSERT INTO all_time_leaders (player_name, total_damage, total_hits, bosses_killed, last_seen)
+                 VALUES (?, ?, ?, 1, ?)
+                 ON CONFLICT(player_name) DO UPDATE SET
+                   total_damage = total_damage + excluded.total_damage,
+                   total_hits = total_hits + excluded.total_hits,
+                   bosses_killed = bosses_killed + 1,
+                   last_seen = excluded.last_seen`
+              );
+
+              const ts = Date.now();
+              for (const c of contributors) {
+                upsert.run(c.player_name, c.damage, c.hits, ts);
+              }
+            } catch (err) {
+              console.error('[DB] Error persisting boss defeat:', err.message);
+            }
+
             broadcast({
               type: 'bossDefeated',
               participants: Array.from(participants)
             });
+
+            startRespawnTimer();
+          }
+          break;
+        }
+
+        case 'getLeaderboard': {
+          try {
+            const rows = db.prepare(
+              'SELECT player_name, damage, hits FROM contributions WHERE fight_id = ? ORDER BY damage DESC LIMIT 20'
+            ).all(currentFightId);
+            sendTo(ws, { type: 'leaderboard', scope: 'current', data: rows });
+          } catch (err) {
+            console.error('[DB] Error reading leaderboard:', err.message);
+          }
+          break;
+        }
+
+        case 'getAllTimeLeaders': {
+          try {
+            const rows = db.prepare(
+              'SELECT player_name, total_damage, total_hits, bosses_killed FROM all_time_leaders ORDER BY total_damage DESC LIMIT 20'
+            ).all();
+            sendTo(ws, { type: 'leaderboard', scope: 'alltime', data: rows });
+          } catch (err) {
+            console.error('[DB] Error reading all-time leaders:', err.message);
           }
           break;
         }
@@ -263,27 +380,25 @@ wss.on('connection', (ws) => {
           break;
       }
     } catch (e) {
-      // Silently drop errors to prevent server crashing
+      // Silently drop
     }
   });
 
-  // 10. CLEAN DISCONNECT (Protected by try-catch to guarantee stability)
   const cleanup = () => {
     try {
       if (players.has(ws)) {
         players.delete(ws);
         broadcast({ type: 'playerCount', count: players.size });
       }
-    } catch (err) {
-      // Ignore
-    }
+    } catch (err) { /* skip */ }
   };
 
   ws.on('close', cleanup);
   ws.on('error', cleanup);
 });
 
-// Listen on configured port
 server.listen(PORT, () => {
   console.log(`[Last Meadow Online] WebSocket Server running on port ${PORT}`);
+  console.log(`[DB] Database path: ${DB_PATH}`);
+  console.log(`[DB] Active fight: #${currentFightId}`);
 });

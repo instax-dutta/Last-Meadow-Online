@@ -1,5 +1,5 @@
 {
-  "_comment": "Pterodactyl Egg — Last Meadow Online. Forks: change ghcr.io/instax-dutta to your own registry. Protocol: TCP (HTTP + WebSocket).",
+  "_comment": "Pterodactyl Egg — Last Meadow Online. IMPORTANT: Mount server storage to /app/data or the SQLite DB will be lost on restart. Protocol: TCP (HTTP + WebSocket). Forks: change ghcr.io/instax-dutta to your own registry.",
   "meta": {
     "version": "PTDL_v2",
     "update_url": null
@@ -7,7 +7,7 @@
   "exported_at": "2026-06-18T00:00:00Z",
   "name": "Last Meadow Online",
   "author": "admin@lastmeadow.dev",
-  "description": "Browser multiplayer boss battler — gather, craft, fight. Built for Discord.",
+  "description": "Browser multiplayer boss battler — gather, craft, fight. Persistent SQLite. Built for Discord.",
   "features": null,
   "docker_images": {
     "Last Meadow Online": "ghcr.io/instax-dutta/last-meadow-online:latest"
@@ -46,6 +46,16 @@
       "user_viewable": true,
       "user_editable": true,
       "rules": "required|string|max:64",
+      "field_type": "text"
+    },
+    {
+      "name": "Database Path",
+      "description": "Absolute path to SQLite database file. Must point inside a mounted volume for persistence across restarts.",
+      "env_variable": "DB_PATH",
+      "default_value": "/app/data/game.db",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|max:255",
       "field_type": "text"
     }
   ]
