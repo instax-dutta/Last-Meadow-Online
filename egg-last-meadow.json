@@ -29,13 +29,13 @@
   },
   "variables": [
     {
-      "name": "Server Listen Port",
-      "description": "Server listen port",
+      "name": "Override Port",
+      "description": "Leave empty to use Pterodactyl-allocated port (SERVER_PORT). Only set if you need to override.",
       "env_variable": "PORT",
-      "default_value": "3000",
+      "default_value": "",
       "user_viewable": true,
       "user_editable": true,
-      "rules": "required|integer|min:1024|max:65535",
+      "rules": "nullable|integer|min:1024|max:65535",
       "field_type": "text"
     },
     {

@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const WebSocket = require('ws');
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.SERVER_PORT || process.env.PORT || 3000;
 
 // Shared Game State
 let bossHP = 1000000;
