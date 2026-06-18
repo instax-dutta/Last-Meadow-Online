@@ -7,7 +7,7 @@
   "exported_at": "2026-06-18T00:00:00Z",
   "name": "Last Meadow Online",
   "author": "admin@lastmeadow.dev",
-  "description": "Real-time multiplayer browser game server",
+  "description": "Browser multiplayer boss battler — gather, craft, fight. Built for Discord.",
   "features": null,
   "docker_images": {
     "Last Meadow Online": "ghcr.io/GHCR_OWNER/last-meadow-online:latest"
