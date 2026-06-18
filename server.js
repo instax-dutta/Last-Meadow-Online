@@ -5,7 +5,7 @@ const WebSocket = require('ws');
 const Database = require('better-sqlite3');
 
 const PORT = process.env.SERVER_PORT || process.env.PORT || 3000;
-const DB_PATH = process.env.DB_PATH || '/app/data/game.db';
+const DB_PATH = process.env.DB_PATH || '/home/container/game.db';
 const BOSS_RESPAWN_DELAY = parseInt(process.env.BOSS_RESPAWN_DELAY, 10) || 3600000;
 
 fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });

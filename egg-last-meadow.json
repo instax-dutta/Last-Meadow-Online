@@ -1,5 +1,5 @@
 {
-  "_comment": "Pterodactyl Egg — Last Meadow Online. IMPORTANT: Mount server storage to /app/data or the SQLite DB will be lost on restart. Protocol: TCP (HTTP + WebSocket). Forks: change ghcr.io/instax-dutta to your own registry.",
+  "_comment": "Pterodactyl Egg — Last Meadow Online. DB lives at /home/container/game.db — auto-persisted by Pterodactyl. Protocol: TCP (HTTP + WebSocket). Forks: change ghcr.io/instax-dutta to your own registry.",
   "meta": {
     "version": "PTDL_v2",
     "update_url": null
@@ -52,7 +52,7 @@
       "name": "Database Path",
       "description": "Absolute path to SQLite database file. Must point inside a mounted volume for persistence across restarts.",
       "env_variable": "DB_PATH",
-      "default_value": "/app/data/game.db",
+      "default_value": "/home/container/game.db",
       "user_viewable": true,
       "user_editable": true,
       "rules": "required|string|max:255",

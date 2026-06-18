@@ -6,12 +6,11 @@ RUN npm ci --omit=dev
 
 FROM node:20-alpine
 RUN addgroup -S meadow && adduser -S meadow -G meadow
-WORKDIR /app
+WORKDIR /home/container
 COPY --from=builder /app/node_modules ./node_modules
 COPY . .
-RUN mkdir -p /app/data && chown meadow:meadow /app/data
+RUN chown meadow:meadow /home/container
 USER meadow
 EXPOSE 3000
 ENV PORT=3000
-VOLUME ["/app/data"]
 CMD ["node", "server.js"]
