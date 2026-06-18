@@ -1,0 +1,52 @@
+{
+  "_comment": "Pterodactyl Egg — Last Meadow Online. Replace GHCR_OWNER with your GitHub username. Protocol: TCP (HTTP + WebSocket).",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": null
+  },
+  "exported_at": "2026-06-18T00:00:00Z",
+  "name": "Last Meadow Online",
+  "author": "admin@lastmeadow.dev",
+  "description": "Real-time multiplayer browser game server",
+  "features": null,
+  "docker_images": {
+    "Last Meadow Online": "ghcr.io/GHCR_OWNER/last-meadow-online:latest"
+  },
+  "file_denylist": [],
+  "startup": "node server.js",
+  "config": {
+    "files": "{}",
+    "startup": "{\"done\":\"listening on port\"}",
+    "logs": "{}",
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": null,
+      "container": "",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Server Listen Port",
+      "description": "Server listen port",
+      "env_variable": "PORT",
+      "default_value": "3000",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|min:1024|max:65535",
+      "field_type": "text"
+    },
+    {
+      "name": "Server Name",
+      "description": "Display name shown to players",
+      "env_variable": "SERVER_NAME",
+      "default_value": "Last Meadow",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|max:64",
+      "field_type": "text"
+    }
+  ]
+}
