@@ -22,7 +22,7 @@ Built for a Discord community that wanted a shared persistent world without leav
 ```bash
 # Run your own server for the community
 docker run -d -p 3000:3000 --name last-meadow \
-  ghcr.io/YOUR_GITHUB_USERNAME/last-meadow-online:latest
+  ghcr.io/instax-dutta/last-meadow-online:latest
 ```
 
 Open `http://localhost:3000` and share the link with your Discord. Everyone connects instantly — no accounts, no downloads.
@@ -31,16 +31,19 @@ Open `http://localhost:3000` and share the link with your Discord. Everyone conn
 
 1. Import `egg-last-meadow.json` into your Pterodactyl Panel (Nests → Import Egg).
 2. Create a new server using the **Last Meadow Online** egg.
-3. Replace `GHCR_OWNER` in the Docker image field with your GitHub username.
-4. Set **Server Listen Port** and **Server Name** as desired.
-5. Start the server and share your domain in Discord.
+3. Leave the **Override Port** field empty — Pterodactyl allocates a port automatically.
+4. Set **Server Name** as desired, then start the server.
+5. Share your domain and allocated port in Discord.
+
+The server auto-detects the port Pterodactyl assigns via `SERVER_PORT`. No manual port mapping needed.
 
 ## Environment Variables
 
-| Variable      | Default        | Description                      |
-|---------------|----------------|----------------------------------|
-| `PORT`        | `3000`         | Server listen port               |
-| `SERVER_NAME` | `Last Meadow`  | Display name shown to players    |
+| Variable      | Default               | Description                            |
+|---------------|-----------------------|----------------------------------------|
+| `SERVER_PORT` | *(set by Pterodactyl)* | Auto-allocated port. Takes priority.   |
+| `PORT`        | `3000`                | Fallback for bare Docker / local dev.  |
+| `SERVER_NAME` | `Last Meadow`         | Display name shown to players.         |
 
 ## Local Dev
 
@@ -49,6 +52,8 @@ npm install
 node server.js
 # Opens at http://localhost:3000
 ```
+
+Override the port with `PORT=8080 node server.js` if needed.
 
 Open multiple browser tabs to simulate a multiplayer session — or rope in friends on the same LAN.
 
