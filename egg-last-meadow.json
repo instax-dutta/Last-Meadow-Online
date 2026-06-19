@@ -13,7 +13,7 @@
     "Last Meadow Online": "ghcr.io/instax-dutta/last-meadow-online:latest"
   },
   "file_denylist": [],
-  "startup": "node server.js",
+  "startup": "node /app/server.js",
   "config": {
     "files": "{}",
     "startup": "{\"done\":\"listening on port\"}",
