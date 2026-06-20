@@ -1,6 +1,6 @@
 # Last Meadow Online
 
-A browser-based multiplayer boss battler born in Discord — retro MS Paint aesthetic, real-time co-op chaos, and one big angry boss to take down together.
+A browser-based multiplayer boss battler — retro MS Paint aesthetic, real-time co-op chaos, and one big angry boss to take down together.
 
 ## What is it?
 
@@ -8,7 +8,7 @@ Last Meadow Online is a **persistent multiplayer browser game** where a communit
 
 Players choose a class (Ranger / Paladin / Priest) and a profession (Fletcher / Smithy / Scholar), then work together across gathering, crafting, and battle phases to defeat the boss. Every hit counts. Every craft matters.
 
-Built for a Discord community that wanted a shared persistent world without leaving the browser.
+Recreated so anyone can play the full experience anytime — no signups, no downloads, just a browser.
 
 ## How it Plays
 
@@ -25,7 +25,7 @@ docker run -d -p 3000:3000 --name last-meadow \
   ghcr.io/instax-dutta/last-meadow-online:latest
 ```
 
-Open `http://localhost:3000` and share the link with your Discord. Everyone connects instantly — no accounts, no downloads.
+Open `http://localhost:3000` and share the link. Everyone connects instantly — no accounts, no downloads.
 
 ## Pterodactyl Setup
 
@@ -33,7 +33,7 @@ Open `http://localhost:3000` and share the link with your Discord. Everyone conn
 2. Create a new server using the **Last Meadow Online** egg.
 3. Leave the **Override Port** field empty — Pterodactyl allocates a port automatically.
 4. Set **Server Name** as desired, then start the server.
-5. Share your domain and allocated port in Discord.
+5. Share your domain and port with players.
 
 The server auto-detects the port Pterodactyl assigns via `SERVER_PORT`. No manual port mapping needed.
 

@@ -7,7 +7,7 @@
   "exported_at": "2026-06-18T00:00:00Z",
   "name": "Last Meadow Online",
   "author": "contact@sdad.pro",
-  "description": "Browser multiplayer boss battler — gather, craft, fight. Persistent SQLite. Built for Discord.",
+  "description": "Browser multiplayer boss battler — gather, craft, fight. Persistent SQLite.",
   "features": null,
   "docker_images": {
     "Last Meadow Online": "ghcr.io/instax-dutta/last-meadow-online:latest"
