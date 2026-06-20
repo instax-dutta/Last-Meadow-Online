@@ -22,7 +22,7 @@
   },
   "scripts": {
     "installation": {
-      "script": "# No additional install steps needed — everything ships in the image\necho \"Installation complete\"",
+      "script": "echo Installation complete",
       "container": "ghcr.io/instax-dutta/last-meadow-online:latest",
       "entrypoint": "/bin/sh"
     }

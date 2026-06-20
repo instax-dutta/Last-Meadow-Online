@@ -3,6 +3,13 @@ name: Publish Docker image
 on:
   push:
     branches: [main]
+    paths:
+      - Dockerfile
+      - server.js
+      - package.json
+      - package-lock.json
+      - .dockerignore
+      - .github/workflows/docker-publish.yml
   workflow_dispatch:
 
 jobs:
