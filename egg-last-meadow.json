@@ -16,7 +16,7 @@
   "startup": "node /app/server.js",
   "config": {
     "files": "{}",
-    "startup": "{\"done\":\"listening on port\"}",
+    "startup": "{\"done\":\"running on port\"}",
     "logs": "{}",
     "stop": "^C"
   },
