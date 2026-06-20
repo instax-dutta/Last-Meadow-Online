@@ -24,7 +24,7 @@
     "installation": {
       "script": "# No additional install steps needed — everything ships in the image\necho \"Installation complete\"",
       "container": "",
-      "entrypoint": "bash"
+      "entrypoint": "/bin/sh"
     }
   },
   "variables": [
