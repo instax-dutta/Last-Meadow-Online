@@ -155,21 +155,48 @@ setInterval(() => {
 }, 30000);
 
 const server = http.createServer((req, res) => {
-  if (req.method === 'GET' && (req.url === '/' || req.url === '/index.html')) {
-    const filePath = path.join(__dirname, 'index.html');
-    fs.readFile(filePath, 'utf8', (err, content) => {
-      if (err) {
-        res.writeHead(500, { 'Content-Type': 'text/plain' });
-        res.end('Internal Server Error');
-      } else {
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        res.end(content);
-      }
-    });
-  } else {
-    res.writeHead(404, { 'Content-Type': 'text/plain' });
-    res.end('Not Found');
+  if (req.method === 'GET') {
+    let urlPath = req.url;
+    if (urlPath === '/' || urlPath === '/index.html') {
+      urlPath = '/index.html';
+    }
+
+    // Whitelist of allowed files to serve statically (prevents path traversal)
+    const allowedStaticFiles = [
+      '/index.html',
+      '/favicon.ico',
+      '/favicon-96x96.png',
+      '/apple-touch-icon.png',
+      '/web-app-manifest-192x192.png',
+      '/web-app-manifest-512x512.png',
+      '/site.webmanifest'
+    ];
+
+    if (allowedStaticFiles.includes(urlPath)) {
+      const filePath = path.join(__dirname, urlPath);
+      const ext = path.extname(filePath);
+      
+      let contentType = 'text/plain';
+      if (ext === '.html') contentType = 'text/html';
+      else if (ext === '.ico') contentType = 'image/x-icon';
+      else if (ext === '.png') contentType = 'image/png';
+      else if (ext === '.webmanifest') contentType = 'application/manifest+json';
+      
+      fs.readFile(filePath, (err, content) => {
+        if (err) {
+          res.writeHead(500, { 'Content-Type': 'text/plain' });
+          res.end('Internal Server Error');
+        } else {
+          res.writeHead(200, { 'Content-Type': contentType });
+          res.end(content);
+        }
+      });
+      return;
+    }
   }
+
+  res.writeHead(404, { 'Content-Type': 'text/plain' });
+  res.end('Not Found');
 });
 
 const wss = new WebSocket.Server({ server });
