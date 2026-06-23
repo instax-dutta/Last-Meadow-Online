@@ -22,6 +22,39 @@
       --paint-purple: #cc33ff;
       --paint-orange: #ff9900;
       --paint-canvas-bg: #f3ecd8; /* Slightly aged parchment paper color */
+      
+      /* Responsive typography scale */
+      --font-sm: clamp(11px, 2vw, 13px);
+      --font-base: clamp(13px, 2.5vw, 15px);
+      --font-lg: clamp(16px, 3vw, 18px);
+      --font-xl: clamp(20px, 4vw, 24px);
+    }
+
+    /* Retro Dark Theme configuration */
+    body.dark-theme {
+      --bg-desktop: #004d4d;
+      --paint-grey: #2d2d2d;
+      --paint-dark-grey: #1a1a1a;
+      --paint-white: #181818;
+      --paint-black: #ffffff;
+      --paint-canvas-bg: #22201b;
+    }
+
+    /* Invert colors of hand-drawn SVGs to align with dark theme borders */
+    body.dark-theme svg {
+      filter: invert(0.9) hue-rotate(180deg);
+    }
+
+    /* Standard high-contrast focus ring for retro keyboard navigation */
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    .tool-btn:focus-visible,
+    .memory-card:focus-visible,
+    .class-card:focus-visible,
+    .prof-card:focus-visible {
+      outline: 3px double var(--paint-blue) !important;
+      outline-offset: 2px;
     }
 
     * {
@@ -37,6 +70,7 @@
       display: flex;
       justify-content: center;
       align-items: center;
+      transition: background-color 0.3s ease;
     }
 
     /* Wobbly sketch borders applied via SVG filter */
@@ -51,13 +85,14 @@
     /* Standard MS Paint Window */
     .paint-window {
       width: 100%;
-      max-width: 1050px;
+      max-width: 1200px;
       background-color: var(--paint-grey);
       border: 4px solid var(--paint-black);
       box-shadow: 8px 8px 0px 0px var(--paint-black);
       padding: 4px;
       display: flex;
       flex-direction: column;
+      transition: background-color 0.3s ease;
     }
 
     /* Title Bar */
@@ -134,6 +169,19 @@
       display: flex;
       flex-direction: column;
       gap: 6px;
+      transition: transform 0.1s ease;
+    }
+
+    .boss-section.shake {
+      animation: bossShake 0.2s ease-in-out;
+    }
+
+    @keyframes bossShake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-5px); }
+      40% { transform: translateX(5px); }
+      60% { transform: translateX(-3px); }
+      80% { transform: translateX(3px); }
     }
 
     .boss-header {
@@ -160,11 +208,22 @@
       background-color: var(--paint-red);
       border: 3px solid var(--paint-black);
       overflow: hidden;
+      transition: box-shadow 0.3s ease;
+    }
+
+    .boss-hp-container.vulnerable {
+      box-shadow: 0 0 12px var(--paint-yellow), inset 0 0 8px var(--paint-yellow);
+      animation: vulnerablePulse 1.5s infinite alternate;
+    }
+
+    @keyframes vulnerablePulse {
+      0% { box-shadow: 0 0 4px var(--paint-yellow), inset 0 0 3px var(--paint-yellow); }
+      100% { box-shadow: 0 0 16px var(--paint-yellow), inset 0 0 10px var(--paint-yellow); }
     }
 
     .boss-hp-bar {
       height: 100%;
-      background-color: var(--paint-green);
+      background: linear-gradient(to right, #00aa00, #33ff33);
       width: 100%;
       transition: width 0.3s ease-out;
     }
@@ -213,7 +272,7 @@
 
     /* Left Toolbar */
     .toolbar {
-      width: 80px;
+      width: 100px;
       background-color: var(--paint-grey);
       border: 3px solid var(--paint-black);
       display: flex;
@@ -224,8 +283,8 @@
     }
 
     .tool-btn {
-      width: 62px;
-      height: 62px;
+      width: 84px;
+      height: 64px;
       background-color: var(--paint-grey);
       border: 3px solid var(--paint-black);
       display: flex;
@@ -238,12 +297,17 @@
       gap: 4px;
       border-radius: 8px 2px 6px 2px / 2px 6px 2px 8px;
       box-shadow: 2px 2px 0px var(--paint-black);
+      filter: grayscale(40%);
+      opacity: 0.8;
+      transition: filter 0.2s, opacity 0.2s, transform 0.1s, box-shadow 0.1s, background-color 0.2s;
     }
 
-    .tool-btn:hover {
+    .tool-btn:hover, .tool-btn:focus-visible {
+      filter: grayscale(0%);
+      opacity: 1;
       background-color: #e0e0e0;
       transform: translate(-1px, -1px);
-      box-shadow: 3px 3px 0px var(--paint-black);
+      box-shadow: 3px 3px 0px var(--paint-black), 0 0 8px rgba(0, 0, 255, 0.2);
     }
 
     .tool-btn:active {
@@ -252,9 +316,11 @@
     }
 
     .tool-btn.active {
+      filter: grayscale(0%);
+      opacity: 1;
       background-color: var(--paint-yellow);
       border-color: var(--paint-black);
-      box-shadow: inset 2px 2px 0px var(--paint-black);
+      box-shadow: inset 3px 3px 0px var(--paint-black);
       transform: translate(0, 0);
     }
 
@@ -296,8 +362,8 @@
     }
 
     .color-palette {
-      display: flex;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
       gap: 12px;
     }
 
@@ -310,6 +376,17 @@
       padding: 4px 10px;
       border-radius: 4px 15px 4px 10px / 12px 4px 15px 4px;
       box-shadow: 3px 3px 0 var(--paint-black);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .inventory-slot.inv-update {
+      animation: invPop 0.4s ease-out;
+    }
+
+    @keyframes invPop {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.12); box-shadow: 0 0 10px var(--paint-yellow), 3px 3px 0 var(--paint-black); }
+      100% { transform: scale(1); }
     }
 
     .item-icon-box {
@@ -765,11 +842,15 @@
       font-weight: bold;
       color: var(--paint-white);
       user-select: none;
-      transition: background-color 0.2s;
+      transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), background-color 0.25s;
     }
 
     .memory-card:hover {
       background-color: #666666;
+    }
+
+    .memory-card:active {
+      transform: scale(0.92);
     }
 
     .memory-card.flipped {
@@ -777,14 +858,25 @@
       color: var(--paint-black);
       border-color: var(--paint-black);
       outline: none;
+      transform: scale(1.05);
+      animation: popFlip 0.3s ease-out;
     }
 
     .memory-card.matched {
-      background-color: var(--paint-green);
+      background-color: #e6ffe6;
       color: var(--paint-black);
-      border-color: var(--paint-black);
+      border-color: var(--paint-green);
       outline: none;
+      transform: scale(1);
+      box-shadow: 0 0 8px var(--paint-green);
       cursor: default;
+      pointer-events: none;
+    }
+
+    @keyframes popFlip {
+      0% { transform: scaleX(1); }
+      50% { transform: scaleX(0); }
+      100% { transform: scaleX(1.05); }
     }
 
     .battle-stats-indicator {
@@ -852,7 +944,7 @@
 
     .stat-name {
       font-size: 11px;
-      color: #555;
+      color: #222;
     }
 
     /* Achievements list */
@@ -1059,19 +1151,21 @@
       .toolbar {
         width: 100%;
         flex-direction: row;
-        justify-content: space-around;
+        justify-content: flex-start;
         overflow-x: auto;
-        padding: 6px 12px;
+        -webkit-overflow-scrolling: touch;
+        padding: 6px 8px;
         gap: 8px;
       }
       .tool-btn {
         flex-shrink: 0;
         width: auto;
-        height: 50px;
+        min-width: 90px;
+        height: 48px; /* Touch target minimum 48px height */
         flex-direction: row;
         padding: 6px 12px;
         font-size: 11px;
-        gap: 8px;
+        gap: 6px;
         justify-content: center;
         align-items: center;
         box-shadow: 2px 2px 0px var(--paint-black);
@@ -1115,32 +1209,33 @@
         box-shadow: 4px 4px 0px 0px var(--paint-black);
       }
       .title-bar {
-        font-size: 14px;
+        font-size: var(--font-base);
         padding: 4px 8px;
       }
       .menu-bar {
-        font-size: 12px;
-        gap: 10px;
+        font-size: var(--font-sm);
+        gap: 8px;
         padding: 4px 6px;
+        flex-wrap: wrap;
       }
       .tool-btn {
         font-size: 10px;
         padding: 4px 8px;
-        height: 42px;
+        height: 48px; /* Maintain 48px on mobile for accessibility */
       }
       .rhythm-arrow-box {
-        width: 32px;
-        height: 32px;
-        font-size: 18px;
+        width: 36px;
+        height: 36px;
+        font-size: 20px;
         border-width: 2px;
       }
       .rhythm-arrows-row {
-        gap: 4px;
+        gap: 6px;
         margin: 10px 0;
       }
       .priest-grid {
-        width: 220px;
-        height: 220px;
+        width: 230px;
+        height: 230px;
         grid-gap: 6px;
       }
       .memory-card {
@@ -1149,11 +1244,13 @@
       }
       .battle-playground {
         width: 100%;
-        max-width: 310px;
+        max-width: clamp(250px, 90vw, 380px);
         height: 240px;
         border-width: 3px;
+        touch-action: none;
       }
       .color-palette {
+        grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
         gap: 6px;
         justify-content: center;
       }
@@ -1264,6 +1361,7 @@
     <div class="menu-bar">
       <div class="menu-item" onclick="showAboutModal()">File Info</div>
       <div class="menu-item" onclick="triggerReset()">Reset Game</div>
+      <div class="menu-item" onclick="toggleDarkMode()">Theme 🌙</div>
       <div class="menu-item" style="margin-left: auto; font-weight: bold; color: var(--paint-red);">demo version</div>
     </div>
 
@@ -1447,6 +1545,10 @@
                 
                 <div class="rhythm-arrows-row" id="rhythm-arrows-container">
                   <!-- 8 arrows go here -->
+                </div>
+
+                <div id="rhythm-combo-container" style="font-weight: bold; font-size: 14px; color: var(--paint-blue); margin-bottom: 8px; height: 20px;">
+                  Combo: <span id="rhythm-combo-count">0</span> 🔥
                 </div>
 
                 <div style="font-size: 13px; color: #555; margin-bottom: 8px;">
@@ -1795,9 +1897,18 @@
     let priestTimeout = null;
     let rhythmKeyHandler = null;
     let priestLocked = false;
+    
+    // Performance & feedback trackers
+    let lastBossHP = null;
+    let craftCombo = 0;
 
     // --- BOOTSTRAP & SCREEN FLOW ROUTING ---
     window.addEventListener('DOMContentLoaded', () => {
+      // Load dark theme preference
+      if (localStorage.getItem('paint-dark-mode') === 'true') {
+        document.body.classList.add('dark-theme');
+      }
+      
       loadState();
       setupRhythmKeyListeners();
       
@@ -2268,6 +2379,9 @@
       craftGameActive = true;
       craftActiveRound = 1;
       craftIndex = 0;
+      craftCombo = 0;
+      const comboCountEl = document.getElementById('rhythm-combo-count');
+      if (comboCountEl) comboCountEl.textContent = '0';
 
       document.getElementById('craft-start-section').style.display = 'none';
       document.getElementById('craft-game-section').style.display = 'block';
@@ -2306,6 +2420,25 @@
       });
     }
 
+    function createRhythmSuccessFeedback(el) {
+      el.classList.add('perfect-hit');
+      setTimeout(() => el.classList.remove('perfect-hit'), 300);
+
+      if (navigator.vibrate) navigator.vibrate(30);
+
+      const rect = el.getBoundingClientRect();
+      const arena = document.getElementById('craft-game-section');
+      const arenaRect = arena.getBoundingClientRect();
+      
+      const popup = document.createElement('div');
+      popup.className = 'rhythm-hit-text';
+      popup.textContent = 'PERFECT!';
+      popup.style.left = `${rect.left - arenaRect.left + rect.width / 2}px`;
+      popup.style.top = `${rect.top - arenaRect.top}px`;
+      arena.appendChild(popup);
+      setTimeout(() => popup.remove(), 500);
+    }
+
     function pressRhythmButton(dir) {
       if (!craftGameActive) return;
 
@@ -2315,6 +2448,16 @@
 
       if (dir === expected) {
         craftIndex++;
+        craftCombo++;
+        const comboCountEl = document.getElementById('rhythm-combo-count');
+        if (comboCountEl) comboCountEl.textContent = craftCombo;
+
+        const container = document.getElementById('rhythm-arrows-container');
+        const arrowBoxes = container.querySelectorAll('.rhythm-arrow-box');
+        if (arrowBoxes[craftIndex - 1]) {
+          createRhythmSuccessFeedback(arrowBoxes[craftIndex - 1]);
+        }
+
         if (craftIndex >= 8) {
           // Round clear!
           if (craftActiveRound < 3) {
@@ -2324,6 +2467,7 @@
             showToast("Round Complete", `Completed round ${craftActiveRound - 1}! Next...`, 'craft');
           } else {
             // Victory!
+            if (navigator.vibrate) navigator.vibrate(200);
             completeCraftingSuccess();
             return;
           }
@@ -2332,9 +2476,14 @@
       } else {
         // Mismatch! Reset current round
         craftIndex = 0;
+        craftCombo = 0;
+        const comboCountEl = document.getElementById('rhythm-combo-count');
+        if (comboCountEl) comboCountEl.textContent = '0';
         errorLabel.textContent = 'Oops! Failed sequence. Round reset!';
         renderRhythmArrows();
         
+        if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+
         // Shake sequence container
         const container = document.getElementById('rhythm-arrows-container');
         container.style.animation = 'none';
@@ -2450,7 +2599,7 @@
     function initRangerBattle() {
       rangerClicks = 0;
       document.getElementById('battle-objective-indicator').textContent = 'Hits: 0 / 10';
-      document.getElementById('battle-instructions-label').textContent = 'Click the moving target 10 times quickly!';
+      document.getElementById('battle-instructions-label').textContent = 'Tap/Click the moving target 10 times quickly!';
 
       const arena = document.getElementById('battle-playground-area');
       
@@ -2461,10 +2610,11 @@
       arena.appendChild(target);
 
       function moveTarget() {
-        const maxW = arena.clientWidth - 40;
-        const maxH = arena.clientHeight - 40;
-        const randX = Math.floor(Math.random() * maxW);
-        const randY = Math.floor(Math.random() * maxH);
+        const targetSize = target.offsetWidth || 44;
+        const maxW = arena.clientWidth - targetSize;
+        const maxH = arena.clientHeight - targetSize;
+        const randX = Math.max(0, Math.floor(Math.random() * maxW));
+        const randY = Math.max(0, Math.floor(Math.random() * maxH));
         
         target.style.left = `${randX}px`;
         target.style.top = `${randY}px`;
@@ -2476,16 +2626,24 @@
       // Make target jump every 650ms if not clicked
       rangerMoveInterval = setInterval(moveTarget, 650);
 
-      // Handle clicks
-      target.onclick = (e) => {
+      // Handle pointerdown (instant touch/click response, debounced)
+      let lastTap = 0;
+      target.onpointerdown = (e) => {
         e.stopPropagation();
+        e.preventDefault();
+        
+        const now = Date.now();
+        if (now - lastTap < 100) return; // Debounce rapid double register
+        lastTap = now;
+        
         rangerClicks++;
         document.getElementById('battle-objective-indicator').textContent = `Hits: ${rangerClicks} / 10`;
         
-        // Visual hit splash
+        // Visual hit splash at pointer coords
         createHitSplat(e.clientX, e.clientY);
         
         if (rangerClicks >= 10) {
+          if (navigator.vibrate) navigator.vibrate(200);
           completeBattleSuccess(100);
         } else {
           // Immediately move on click and restart move timer
@@ -2502,18 +2660,40 @@
       const localX = x - rect.left;
       const localY = y - rect.top;
 
+      // 1. Floating text damage splat
       const splat = document.createElement('div');
-      splat.style.position = 'absolute';
-      splat.style.left = `${localX - 25}px`;
-      splat.style.top = `${localY - 15}px`;
-      splat.style.color = 'var(--paint-yellow)';
-      splat.style.fontWeight = 'bold';
-      splat.style.fontSize = '20px';
-      splat.style.pointerEvents = 'none';
-      splat.textContent = 'BAM!';
+      splat.className = 'hit-splat-text';
+      splat.style.left = `${localX}px`;
+      splat.style.top = `${localY}px`;
+      const dmg = Math.floor(Math.random() * 25) + 60;
+      splat.textContent = `💥 +${dmg}`;
       arena.appendChild(splat);
-      
-      setTimeout(() => splat.remove(), 400);
+      setTimeout(() => splat.remove(), 600);
+
+      // 2. Exploding particles
+      for (let i = 0; i < 8; i++) {
+        const p = document.createElement('div');
+        p.className = 'hit-particle';
+        p.style.left = `${localX}px`;
+        p.style.top = `${localY}px`;
+        
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 20 + Math.random() * 20;
+        p.style.setProperty('--vx', `${Math.cos(angle) * dist}px`);
+        p.style.setProperty('--vy', `${Math.sin(angle) * dist}px`);
+        
+        arena.appendChild(p);
+        setTimeout(() => p.remove(), 400);
+      }
+
+      // 3. Mini-shake on battle playground
+      arena.classList.remove('hit-shake');
+      void arena.offsetWidth; // trigger reflow
+      arena.classList.add('hit-shake');
+      setTimeout(() => arena.classList.remove('hit-shake'), 150);
+
+      // 4. Mobile haptic pulse
+      if (navigator.vibrate) navigator.vibrate(60);
     }
 
     // B. Paladin Shield Catch Minigame
@@ -2532,8 +2712,8 @@
       shield.textContent = '🛡️ SHIELD';
       arena.appendChild(shield);
 
-      // Mousemove logic
-      arena.onmousemove = (e) => {
+      // Touch/pointer movement logic (fully responsive on mobile)
+      const updateShieldPos = (e) => {
         const rect = arena.getBoundingClientRect();
         let mouseX = e.clientX - rect.left - 32;
         let mouseY = e.clientY - rect.top - 11;
@@ -2549,6 +2729,16 @@
 
         shield.style.left = `${mouseX}px`;
         shield.style.top = `${mouseY}px`;
+      };
+
+      arena.onpointerdown = (e) => {
+        if (!battleGameActive) return;
+        updateShieldPos(e);
+      };
+
+      arena.onpointermove = (e) => {
+        if (!battleGameActive) return;
+        updateShieldPos(e);
       };
 
       // Spawning loop
@@ -3031,40 +3221,78 @@
       const roundedPct = pct.toFixed(2);
       
       const bar = document.getElementById('boss-hp-bar');
-      bar.style.width = `${pct}%`;
+      if (bar) bar.style.width = `${pct}%`;
       
       const text = document.getElementById('boss-hp-text');
       const formattedHP = state.bossHP.toLocaleString();
       const formattedMax = BOSS_MAX_HP.toLocaleString();
-      text.textContent = `${formattedHP} / ${formattedMax} HP (${roundedPct}%)`;
+      if (text) text.textContent = `${formattedHP} / ${formattedMax} HP (${roundedPct}%)`;
+
+      // Update vulnerable glow class on HP container
+      const hpContainer = document.querySelector('.boss-hp-container');
+      if (hpContainer) {
+        if (bossPhase === 'vulnerable') {
+          hpContainer.classList.add('vulnerable');
+        } else {
+          hpContainer.classList.remove('vulnerable');
+        }
+      }
+
+      // Trigger visual shake when boss takes damage
+      if (lastBossHP !== null && state.bossHP < lastBossHP) {
+        const bossSec = document.querySelector('.boss-section');
+        if (bossSec) {
+          bossSec.classList.remove('shake');
+          void bossSec.offsetWidth; // Force layout recalculation to restart animation
+          bossSec.classList.add('shake');
+          setTimeout(() => bossSec.classList.remove('shake'), 200);
+        }
+      }
+      lastBossHP = state.bossHP;
+    }
+
+    function updateInventoryValue(elemId, newVal) {
+      const el = document.getElementById(elemId);
+      if (el) {
+        const oldVal = parseInt(el.textContent) || 0;
+        el.textContent = newVal;
+        if (oldVal !== newVal) {
+          const slot = el.parentElement;
+          if (slot) {
+            slot.classList.remove('inv-update');
+            void slot.offsetWidth; // force layout recalculation to restart animation
+            slot.classList.add('inv-update');
+          }
+        }
+      }
     }
 
     function renderInventory() {
-      document.getElementById('inv-wood').textContent = state.inventory.wood;
-      document.getElementById('inv-metal').textContent = state.inventory.metal;
-      document.getElementById('inv-leather').textContent = state.inventory.leather;
+      updateInventoryValue('inv-wood', state.inventory.wood);
+      updateInventoryValue('inv-metal', state.inventory.metal);
+      updateInventoryValue('inv-leather', state.inventory.leather);
       
       const arrowsSlot = document.getElementById('inv-slot-arrows');
       const armorSlot = document.getElementById('inv-slot-armor');
       const magicSlot = document.getElementById('inv-slot-magic');
 
       // Hide all crafted slots first
-      arrowsSlot.style.display = 'none';
-      armorSlot.style.display = 'none';
-      magicSlot.style.display = 'none';
+      if (arrowsSlot) arrowsSlot.style.display = 'none';
+      if (armorSlot) armorSlot.style.display = 'none';
+      if (magicSlot) magicSlot.style.display = 'none';
 
       // Only show slot matching profession/class to keep inventory clean
       if (state.playerClass === 'Ranger' || state.playerProfession === 'Fletcher') {
-        arrowsSlot.style.display = 'flex';
-        document.getElementById('inv-arrows').textContent = state.inventory.arrows;
+        if (arrowsSlot) arrowsSlot.style.display = 'flex';
+        updateInventoryValue('inv-arrows', state.inventory.arrows);
       }
       if (state.playerClass === 'Paladin' || state.playerProfession === 'Smithy') {
-        armorSlot.style.display = 'flex';
-        document.getElementById('inv-armor').textContent = state.inventory.armor;
+        if (armorSlot) armorSlot.style.display = 'flex';
+        updateInventoryValue('inv-armor', state.inventory.armor);
       }
       if (state.playerClass === 'Priest' || state.playerProfession === 'Scholar') {
-        magicSlot.style.display = 'flex';
-        document.getElementById('inv-magic').textContent = state.inventory.magic;
+        if (magicSlot) magicSlot.style.display = 'flex';
+        updateInventoryValue('inv-magic', state.inventory.magic);
       }
     }
 
